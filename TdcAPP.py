@@ -299,5 +299,85 @@ def editar_movimento_financeiro(dados):
         movimento_encontrado["data"] = nova_data
 
     guardar_dados(dados)
-    print("✓ Movimento financeiro atualizado com sucesso!")   
+    print("✓ Movimento financeiro atualizado com sucesso!")
+
+# ==========================================
+# 6. MENU PRINCIPAL
+# ==========================================
+
+def menu():
+    dados = carregar_dados()
+    perfil_ativo = fazer_login(dados)
+    
+    # Se o utilizador escolheu "0" no ecrã de login para sair
+    if perfil_ativo is None:
+        print("\nA encerrar a TrocApp... Até breve!")
+        return
+
+    while True:
+        print("\n==================================")
+        print(f"  TdCApp - Menu ({perfil_ativo.upper()})  ")
+        print("==================================")
+        
+        # Opções visíveis para todos
+        print("1. Listar Atuações")
+        #print("2. Ver Galeria Multimédia")
+        
+        # Opções visíveis apenas para Membros e Admins
+        if perfil_ativo in ["membro", "admin"]:
+            print("3. Consultar Saldo e Finanças")
+            
+        # Opções visíveis apenas para Admins
+        if perfil_ativo == "admin":
+            print("4. Adicionar Atuação")
+            print("5. Editar Atuação")
+            print("6. Remover Atuação")
+            print("7. Registar Receita / Despesa")
+            print("8. Editar Movimento Financeiro")
+            #print("9. Adicionar Foto / Vídeo")
+            
+        print("0. Sair")
+        
+        opcao = input("\nEscolha uma opção: ").strip()
+        
+        # --- LÓGICA DAS OPÇÕES ---
+        if opcao == "1":
+            if perfil_ativo == "visitante":
+                print("\n--- ATUAÇÕES PÚBLICAS ---")
+                publicas = [a for a in dados.get("atuacoes", []) if a.get("agenda") == "publica"]
+                for a in publicas:
+                    print(f"[{a['id']}] {a['data']} às {a['hora']} | {a['tipo']} em {a['local']}")
+            else:
+                listar_atuacoes(dados)
+                
+        #elif opcao == "2":
+            #listar_multimedia(dados)
+            
+        elif opcao == "3" and perfil_ativo in ["membro", "admin"]:
+            consultar_financas_e_saldo(dados)
+            
+        elif opcao == "4" and perfil_ativo == "admin":
+            adicionar_atuacao(dados)
+            
+        elif opcao == "5" and perfil_ativo == "admin":
+            editar_atuacao(dados)
+            
+        elif opcao == "6" and perfil_ativo == "admin":
+            remover_atuacao(dados)
+            
+        elif opcao == "7" and perfil_ativo == "admin":
+            adicionar_movimento_financeiro(dados)
+        elif opcao == "8" and perfil_ativo == "admin":
+            editar_movimento_financeiro(dados)
+        #elif opcao == "9" and perfil_ativo == "admin":
+            #adicionar_multimedia(dados)
+            
+        elif opcao == "0":
+            print("\nA encerrar a TrocApp... Até breve!")
+            break
+        else:
+            print("❌ Opção inválida ou sem permissão para o seu perfil.")
+
+if __name__ == "__main__":
+    menu()
 
