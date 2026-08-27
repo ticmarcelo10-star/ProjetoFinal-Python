@@ -189,3 +189,115 @@ def remover_atuacao(dados):
         print("✓ Atuação removida com sucesso!")
     else:
         print("Operação cancelada.")
+
+# ==========================================
+# 4. MÓDULO FINANCEIRO
+# ==========================================
+
+def consultar_financas_e_saldo(dados):
+    """Apresenta o histórico financeiro e o cálculo do saldo atual."""
+    financas = dados.get("financas", [])
+    print("\n--- HISTÓRICO FINANCEIRO ---")
+    if not financas:
+        print("Nenhum movimento registado.")
+    else:
+        for m in financas:
+            sinal = "+" if m["tipo"] == "receita" else "-"
+            print(f"[{m['id']}] {m['data']} | {m['descricao']}: {sinal}{m['valor']:.2f}€ ({m['tipo'].upper()})")
+    
+    total_receitas = sum(m["valor"] for m in financas if m["tipo"] == "receita")
+    total_despesas = sum(m["valor"] for m in financas if m["tipo"] == "despesa")
+    saldo = total_receitas - total_despesas
+    
+    print("\n----------------------------")
+    print(f"Total Receitas: {total_receitas:>8.2f}€")
+    print(f"Total Despesas: {total_despesas:>8.2f}€")
+    print(f"Saldo Atual:    {saldo:>8.2f}€")
+    print("----------------------------")
+
+def adicionar_movimento_financeiro(dados):
+    """Regista uma nova receita ou despesa."""
+    print("\n--- REGISTAR MOVIMENTO FINANCEIRO ---")
+    tipo = input("Tipo (receita / despesa): ").lower()
+    if tipo not in ["receita", "despesa"]:
+        print("❌ Tipo inválido! Operação cancelada.")
+        return
+        
+    descricao = input("Descrição: ")
+    try:
+        valor = float(input("Valor (€): "))
+    except ValueError:
+        print("❌ Valor inválido! Insira um número.")
+        return
+        
+    data = input("Data (DD-MM-AAAA): ")
+    
+    financas = dados.get("financas", [])
+    novo_id = max([m["id"] for m in financas], default=0) + 1
+    
+    novo_movimento = {
+        "id": novo_id,
+        "tipo": tipo,
+        "descricao": descricao,
+        "valor": valor,
+        "data": data
+    }
+    
+    dados["financas"].append(novo_movimento)
+    guardar_dados(dados)
+    print(f"✓ {tipo.capitalize()} registada com sucesso!")
+
+def editar_movimento_financeiro(dados):
+    """Permite editar uma receita ou despesa existente procurando pelo seu ID."""
+    consultar_financas_e_saldo(dados)
+    financas = dados.get("financas", [])
+    if not financas:
+        return
+
+    try:
+        id_procurado = int(input("\nDigite o ID do movimento que deseja editar: "))
+    except ValueError:
+        print("❌ ID inválido. Deve inserir um número.")
+        return
+
+    # Procurar o movimento pelo ID
+    movimento_encontrado = None
+    for m in financas:
+        if m["id"] == id_procurado:
+            movimento_encontrado = m
+            break
+
+    if not movimento_encontrado:
+        print("❌ Movimento financeiro não encontrado.")
+        return
+
+    print(f"\n--- A EDITAR MOVIMENTO [{movimento_encontrado['id']}] ---")
+    print("(Pressione ENTER sem escrever nada se quiser manter o valor atual)")
+
+    novo_tipo = input(f"Novo Tipo (receita/despesa) (atual: {movimento_encontrado['tipo']}): ").strip().lower()
+    nova_descricao = input(f"Nova Descrição (atual: {movimento_encontrado['descricao']}): ").strip()
+    novo_valor_input = input(f"Novo Valor em € (atual: {movimento_encontrado['valor']:.2f}): ").strip()
+    nova_data = input(f"Nova Data AAAA-MM-DD (atual: {movimento_encontrado['data']}): ").strip()
+
+    # Atualizar tipo se for válido
+    if novo_tipo in ["receita", "despesa"]:
+        movimento_encontrado["tipo"] = novo_tipo
+
+    # Atualizar descrição se preenchida
+    if nova_descricao:
+        movimento_encontrado["descricao"] = nova_descricao
+
+    # Atualizar valor se preenchido e for um número válido
+    if novo_valor_input:
+        try:
+            movimento_encontrado["valor"] = float(novo_valor_input)
+        except ValueError:
+            print("⚠️ Valor inválido inserido! Mantido o valor original.")
+
+    # Atualizar data se preenchida
+    if nova_data:
+        movimento_encontrado["data"] = nova_data
+
+    guardar_dados(dados)
+    print("✓ Movimento financeiro atualizado com sucesso!")   
+
