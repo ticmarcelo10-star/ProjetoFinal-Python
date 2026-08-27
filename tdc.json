@@ -1,0 +1,19 @@
+{
+    "utilizadores": [
+        {
+            "id": 1,
+            "username": "admin",
+            "password": "admtdc26",
+            "perfil": "admin"
+        },
+        {
+            "id": 2,
+            "username": "membro",
+            "password": "trocadalho26",
+            "perfil": "membro"
+        }
+    ],
+    "atuacoes": [],
+    "financas": [],
+    "multimedia": []
+}
