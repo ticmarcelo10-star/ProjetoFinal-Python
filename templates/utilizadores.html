@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>👥 Gestão de Utilizadores</h2>
+
+<div class="card">
+    <h3>Novo Utilizador</h3>
+    <form action="/utilizadores" method="POST">
+        <input type="text" name="username" placeholder="Nome de Utilizador" required>
+        <input type="password" name="password" placeholder="Palavra-passe" required>
+        <select name="perfil">
+            <option value="membro">Membro</option>
+            <option value="admin">Administrador</option>
+        </select>
+        <button type="submit" class="btn btn-green">Criar Utilizador</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Utilizadores Registados</h3>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Perfil</th>
+            <th>Ação</th>
+        </tr>
+        {% for u in utilizadores %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.perfil }}</td>
+            <td>
+                {% if u.username != 'admin' %}
+                <a href="/utilizadores/remover/{{ u.id }}" class="btn btn-red" style="padding: 3px 6px; font-size: 12px;">Remover</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

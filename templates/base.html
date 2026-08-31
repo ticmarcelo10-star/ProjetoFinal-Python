@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>TdCApp - Gestão</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f8; }
+        header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+        .container { padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #34495e; color: white; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; text-decoration: none; display: inline-block; }
+        .btn-green { background: #2ecc71; }
+        .btn-red { background: #e74c3c; }
+        .btn-blue { background: #3498db; }
+        input, select { padding: 8px; margin: 5px 0; display: block; width: 100%; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <strong>TdCApp</strong> | Perfil: <em>{{ perfil | upper }}</em>
+        </div>
+        <nav>
+            <a href="/atuacoes">Atuações</a>
+            {% if perfil in ['admin', 'membro'] %}
+                <a href="/financas">Finanças</a>
+            {% endif %}
+            <a href="/multimedia">Multimédia</a>
+            {% if perfil == 'admin' %}
+                <a href="/utilizadores">Utilizadores</a>
+            {% endif %}
+            <a href="/logout" style="color: #ff7675;">Sair</a>
+        </nav>
+    </header>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>TdCApp - Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #2c3e50; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 30px; border-radius: 8px; width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
+        button { background: #2ecc71; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-visitante { background: #95a5a6; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2>Entrar no TdCApp</h2>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for msg in messages %}
+              <p style="color: red; font-size: 14px;">{{ msg }}</p>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/login">
+            <input type="text" name="username" placeholder="Utilizador" required>
+            <input type="password" name="password" placeholder="Palavra-passe" required>
+            <button type="submit">Entrar</button>
+        </form>
+        <hr>
+        <form method="POST" action="/login">
+            <input type="hidden" name="opcao" value="visitante">
+            <button type="submit" class="btn-visitante">Entrar como Visitante</button>
+        </form>
+    </div>
+</body>
+</html>

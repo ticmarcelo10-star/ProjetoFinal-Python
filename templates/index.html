@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>📅 Gestão de Atuações</h2>
+
+{% if perfil == 'admin' %}
+<div class="card">
+    <h3>Nova Atuação</h3>
+    <form action="/atuacoes/adicionar" method="POST">
+        <input type="date" name="data" required>
+        <input type="time" name="hora" required>
+        <input type="text" name="local" placeholder="Localização" required>
+        <input type="text" name="tipo" placeholder="Tipo (ex: Procissão, Arruada)" required>
+        <select name="agenda">
+            <option value="publica">Pública</option>
+            <option value="privada">Privada</option>
+        </select>
+        <button type="submit" class="btn btn-green">Adicionar Atuação</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Lista de Atuações</h3>
+    <table>
+        <tr>
+            <th>Data/Hora</th>
+            <th>Local</th>
+            <th>Tipo</th>
+            <th>Agenda</th>
+            <th>Estado</th>
+            {% if perfil == 'admin' %}<th>Ações</th>{% endif %}
+        </tr>
+        {% for a in atuacoes %}
+        <tr>
+            <td>{{ a.data }} {{ a.hora }}</td>
+            <td>{{ a.local }}</td>
+            <td>{{ a.tipo }}</td>
+            <td>{{ a.agenda }}</td>
+            <td><strong>{{ a.estado }}</strong></td>
+            {% if perfil == 'admin' %}
+            <td>
+                <a href="/atuacoes/estado/{{ a.id }}/cancelada" class="btn btn-blue" style="padding: 3px 6px; font-size: 12px;">Cancelar</a>
+                <a href="/atuacoes/remover/{{ a.id }}" class="btn btn-red" style="padding: 3px 6px; font-size: 12px;">Remover</a>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

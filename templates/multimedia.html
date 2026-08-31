@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>📸 Galeria Multimédia</h2>
+
+{% if perfil in ['admin', 'membro'] %}
+<div class="card">
+    <h3>Adicionar Ficheiro / Link</h3>
+    <form action="/multimedia" method="POST">
+        <input type="text" name="titulo" placeholder="Título" required>
+        <input type="url" name="link" placeholder="URL da imagem ou vídeo" required>
+        <select name="tipo">
+            <option value="foto">Foto</option>
+            <option value="video">Vídeo</option>
+        </select>
+        <button type="submit" class="btn btn-green">Adicionar</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Conteúdos</h3>
+    {% for item in media %}
+    <div style="border-bottom: 1px solid #ccc; padding: 10px 0;">
+        <strong>{{ item.titulo }}</strong> ({{ item.tipo }})<br>
+        <a href="{{ item.link }}" target="_blank">{{ item.link }}</a>
+        {% if perfil == 'admin' %}
+            <br><a href="/multimedia/remover/{{ item.id }}" class="btn btn-red" style="padding: 2px 5px; font-size: 10px; margin-top: 5px;">Remover</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

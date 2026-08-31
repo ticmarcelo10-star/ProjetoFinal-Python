@@ -1,14 +1,16 @@
 import json
 import os
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
+app = Flask(__name__)
+app.secret_key = "chave_secreta_tdcapp_bombos"
 FICHEIRO_DADOS = "tdc.json"
 
 # ==========================================
-# 1. GESTÃO DE DADOS (JSON)
+# LEITURA E ESCRITA DO JSON
 # ==========================================
 
 def carregar_dados():
-    """Lê a informação do ficheiro JSON. Se não existir, cria a estrutura base com contas padrão."""
     if not os.path.exists(FICHEIRO_DADOS):
         dados_iniciais = {
             "utilizadores": [
@@ -26,358 +28,251 @@ def carregar_dados():
         return json.load(f)
 
 def guardar_dados(dados):
-    """Guarda o estado atual no ficheiro JSON."""
     with open(FICHEIRO_DADOS, "w", encoding="utf-8") as f:
         json.dump(dados, f, indent=4, ensure_ascii=False)
 
 # ==========================================
-# 2. LOGIN E AUTENTICAÇÃO 
+# AUTENTICAÇÃO
 # ==========================================
 
-def fazer_login(dados):
-    """Gere a autenticação com repetição em caso de credenciais incorretas."""
-    while True:
-        print("\n==================================")
-        print("      BEM-VINDO À TROCAPP         ")
-        print("==================================")
-        print("1. Entrar com conta (Admin / Membro)")
-        print("2. Entrar como Visitante")
-        print("0. Sair")
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        opcao = request.form.get("opcao")
         
-        opcao = input("\nEscolha uma opção: ").strip()
+        if opcao == "visitante":
+            session["perfil"] = "visitante"
+            session["username"] = "Visitante"
+            return redirect(url_for("atuacoes"))
+            
+        username_input = request.form.get("username", "").strip().lower()
+        password_input = request.form.get("password", "").strip()
         
-        if opcao == "1":
-            username_input = input("Utilizador: ").strip().lower()
-            password_input = input("Palavra-passe: ").strip()
-            
-            utilizadores = dados.get("utilizadores", [])
-            
-            # Procurar se existe algum utilizador que coincida com os dados inseridos
-            login_sucesso = False
-            for u in utilizadores:
-                if u["username"].lower() == username_input and u["password"] == password_input:
-                    print(f"\n✓ Login efetuado com sucesso como {u['perfil'].upper()}!")
-                    return u["perfil"]  # Devolve o perfil e sai do ciclo
-            
-            # Se percorreu a lista e não encontrou correspondência
-            print("\n❌ Credenciais incorretas! Tente novamente.")
-            
-        elif opcao == "2":
-            print("\nSessão iniciada como VISITANTE.")
-            return "visitante"
-            
-        elif opcao == "0":
-            return None  # Indica que o utilizador quis sair do programa
-            
-        else:
-            print("\n❌ Opção inválida. Tente novamente.")
+        dados = carregar_dados()
+        for u in dados.get("utilizadores", []):
+            if u["username"].lower() == username_input and u["password"] == password_input:
+                session["perfil"] = u["perfil"]
+                session["username"] = u["username"]
+                return redirect(url_for("atuacoes"))
+        
+        flash("Credenciais incorretas! Tente novamente.")
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 # ==========================================
-# 3. MÓDULO DE ATUAÇÕES
+# ATUAÇÕES
 # ==========================================
 
-def listar_atuacoes(dados):
-    """Lista as atuações registadas (com opção de filtrar por agenda)."""
-    print("\n--- LISTA DE ATUAÇÕES ---")
-    atuacoes = dados.get("atuacoes", [])
-    if not atuacoes:
-        print("Nenhuma atuação registada.")
-        return
+@app.route("/")
+@app.route("/atuacoes")
+def atuacoes():
+    if "perfil" not in session:
+        return redirect(url_for("login"))
+        
+    dados = carregar_dados()
+    lista = dados.get("atuacoes", [])
     
-    for a in atuacoes:
-        print(f"[{a['id']}] {a['data']} às {a['hora']} | {a['tipo']} em {a['local']} (Agenda: {a['agenda']})")
+    if session.get("perfil") == "visitante":
+        lista = [a for a in lista if a.get("agenda") == "publica"]
+        
+    return render_template("index.html", atuacoes=lista, perfil=session.get("perfil"))
 
-def adicionar_atuacao(dados):
-    """Adiciona uma nova atuação."""
-    print("\n--- ADICIONAR NOVA ATUAÇÃO ---")
-    data = input("Data (DD-MM-AAAA): ")
-    hora = input("Hora (HH:MM): ")
-    local = input("Local: ")
-    tipo = input("Tipo (ex: Arruada, Procissão): ")
-    agenda = input("Agenda (publica / interna): ").lower()
-    
-    atuacoes = dados.get("atuacoes", [])
-    novo_id = max([a["id"] for a in atuacoes], default=0) + 1
+@app.route("/atuacoes/adicionar", methods=["POST"])
+def adicionar_atuacao():
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    atuacoes_lista = dados.get("atuacoes", [])
+    novo_id = max([a["id"] for a in atuacoes_lista], default=0) + 1
     
     nova = {
         "id": novo_id,
-        "data": data,
-        "hora": hora,
-        "local": local,
-        "tipo": tipo,
-        "agenda": agenda if agenda in ["publica", "interna"] else "publica",
+        "data": request.form.get("data"),
+        "hora": request.form.get("hora"),
+        "local": request.form.get("local"),
+        "tipo": request.form.get("tipo"),
+        "agenda": request.form.get("agenda", "publica"),
         "estado": "ativa"
     }
     
     dados["atuacoes"].append(nova)
     guardar_dados(dados)
-    print("✓ Atuação adicionada com sucesso!")
+    return redirect(url_for("atuacoes"))
 
-def editar_atuacao(dados):
-    """Permite editar os detalhes de uma atuação existente procurando pelo seu ID."""
-    listar_atuacoes(dados)
-    atuacoes = dados.get("atuacoes", [])
-    if not atuacoes:
-        return
+@app.route("/atuacoes/editar/<int:id_atuacao>", methods=["POST"])
+def editar_atuacao(id_atuacao):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
         
-    try:
-        id_procurado = int(input("\nDigite o ID da atuação que deseja editar: "))
-    except ValueError:
-        print("❌ ID inválido. Deve inserir um número.")
-        return
-
-    # Procurar a atuação pelo ID
-    atuacao_encontrada = None
-    for a in atuacoes:
-        if a["id"] == id_procurado:
-            atuacao_encontrada = a
+    dados = carregar_dados()
+    for a in dados.get("atuacoes", []):
+        if a["id"] == id_atuacao:
+            a["data"] = request.form.get("data", a["data"])
+            a["hora"] = request.form.get("hora", a["hora"])
+            a["local"] = request.form.get("local", a["local"])
+            a["tipo"] = request.form.get("tipo", a["tipo"])
+            a["agenda"] = request.form.get("agenda", a["agenda"])
             break
-
-    if not atuacao_encontrada:
-        print("❌ Atuação não encontrada.")
-        return
-
-    print(f"\n--- A EDITAR ATUAÇÃO [{atuacao_encontrada['id']}] ---")
-    print("(Pressione ENTER sem escrever nada se quiser manter o valor atual)")
-
-    nova_data = input(f"Nova Data (atual: {atuacao_encontrada['data']}): ").strip()
-    nova_hora = input(f"Nova Hora (atual: {atuacao_encontrada['hora']}): ").strip()
-    novo_local = input(f"Novo Local (atual: {atuacao_encontrada['local']}): ").strip()
-    novo_tipo = input(f"Novo Tipo (atual: {atuacao_encontrada['tipo']}): ").strip()
-    nova_agenda = input(f"Nova Agenda (publica/interna) (atual: {atuacao_encontrada['agenda']}): ").strip().lower()
-
-    # Atualizar apenas os campos que o utilizador preencheu
-    if nova_data:
-        atuacao_encontrada["data"] = nova_data
-    if nova_hora:
-        atuacao_encontrada["hora"] = nova_hora
-    if novo_local:
-        atuacao_encontrada["local"] = novo_local
-    if novo_tipo:
-        atuacao_encontrada["tipo"] = novo_tipo
-    if nova_agenda in ["publica", "interna"]:
-        atuacao_encontrada["agenda"] = nova_agenda
-
+            
     guardar_dados(dados)
-    print("✓ Atuação atualizada com sucesso!")
+    return redirect(url_for("atuacoes"))
 
+@app.route("/atuacoes/estado/<int:id_atuacao>/<novo_estado>")
+def alterar_estado_atuacao(id_atuacao, novo_estado):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    for a in dados.get("atuacoes", []):
+        if a["id"] == id_atuacao:
+            a["estado"] = novo_estado
+            break
+            
+    guardar_dados(dados)
+    return redirect(url_for("atuacoes"))
 
-def remover_atuacao(dados):
-    """Remove uma atuação dos dados pelo seu ID."""
-    listar_atuacoes(dados)
-    atuacoes = dados.get("atuacoes", [])
-    if not atuacoes:
-        return
-
-    try:
-        id_procurado = int(input("\nDigite o ID da atuação que deseja remover: "))
-    except ValueError:
-        print("❌ ID inválido. Deve inserir um número.")
-        return
-
-    # Verificar se a atuação existe
-    atuacao_existente = any(a["id"] == id_procurado for a in atuacoes)
-    if not atuacao_existente:
-        print("❌ Atuação não encontrada.")
-        return
-
-    confirmacao = input(f"Tem a certeza que deseja remover a atuação [{id_procurado}]? (s/n): ").strip().lower()
-    if confirmacao == "s":
-        # Filtra a lista mantendo apenas os elementos com ID diferente
-        dados["atuacoes"] = [a for a in atuacoes if a["id"] != id_procurado]
-        guardar_dados(dados)
-        print("✓ Atuação removida com sucesso!")
-    else:
-        print("Operação cancelada.")
+@app.route("/atuacoes/remover/<int:id_atuacao>")
+def remover_atuacao(id_atuacao):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    dados["atuacoes"] = [a for a in dados.get("atuacoes", []) if a["id"] != id_atuacao]
+    guardar_dados(dados)
+    return redirect(url_for("atuacoes"))
 
 # ==========================================
-# 4. MÓDULO FINANCEIRO
+# FINANÇAS
 # ==========================================
 
-def consultar_financas_e_saldo(dados):
-    """Apresenta o histórico financeiro e o cálculo do saldo atual."""
-    financas = dados.get("financas", [])
-    print("\n--- HISTÓRICO FINANCEIRO ---")
-    if not financas:
-        print("Nenhum movimento registado.")
-    else:
-        for m in financas:
-            sinal = "+" if m["tipo"] == "receita" else "-"
-            print(f"[{m['id']}] {m['data']} | {m['descricao']}: {sinal}{m['valor']:.2f}€ ({m['tipo'].upper()})")
+@app.route("/financas", methods=["GET", "POST"])
+def financas():
+    if session.get("perfil") not in ["admin", "membro"]:
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
     
-    total_receitas = sum(m["valor"] for m in financas if m["tipo"] == "receita")
-    total_despesas = sum(m["valor"] for m in financas if m["tipo"] == "despesa")
+    if request.method == "POST" and session.get("perfil") == "admin":
+        movimentos = dados.get("financas", [])
+        novo_id = max([m["id"] for m in movimentos], default=0) + 1
+        
+        novo_movimento = {
+            "id": novo_id,
+            "tipo": request.form.get("tipo"),
+            "descricao": request.form.get("descricao"),
+            "valor": float(request.form.get("valor", 0)),
+            "data": request.form.get("data")
+        }
+        
+        dados["financas"].append(novo_movimento)
+        guardar_dados(dados)
+        return redirect(url_for("financas"))
+        
+    financas_lista = dados.get("financas", [])
+    total_receitas = sum(m["valor"] for m in financas_lista if m["tipo"] == "receita")
+    total_despesas = sum(m["valor"] for m in financas_lista if m["tipo"] == "despesa")
     saldo = total_receitas - total_despesas
     
-    print("\n----------------------------")
-    print(f"Total Receitas: {total_receitas:>8.2f}€")
-    print(f"Total Despesas: {total_despesas:>8.2f}€")
-    print(f"Saldo Atual:    {saldo:>8.2f}€")
-    print("----------------------------")
+    return render_template(
+        "financas.html", 
+        financas=financas_lista, 
+        total_receitas=total_receitas, 
+        total_despesas=total_despesas, 
+        saldo=saldo,
+        perfil=session.get("perfil")
+    )
 
-def adicionar_movimento_financeiro(dados):
-    """Regista uma nova receita ou despesa."""
-    print("\n--- REGISTAR MOVIMENTO FINANCEIRO ---")
-    tipo = input("Tipo (receita / despesa): ").lower()
-    if tipo not in ["receita", "despesa"]:
-        print("❌ Tipo inválido! Operação cancelada.")
-        return
+@app.route("/financas/remover/<int:id_movimento>")
+def remover_financa(id_movimento):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
         
-    descricao = input("Descrição: ")
-    try:
-        valor = float(input("Valor (€): "))
-    except ValueError:
-        print("❌ Valor inválido! Insira um número.")
-        return
-        
-    data = input("Data (DD-MM-AAAA): ")
-    
-    financas = dados.get("financas", [])
-    novo_id = max([m["id"] for m in financas], default=0) + 1
-    
-    novo_movimento = {
-        "id": novo_id,
-        "tipo": tipo,
-        "descricao": descricao,
-        "valor": valor,
-        "data": data
-    }
-    
-    dados["financas"].append(novo_movimento)
-    guardar_dados(dados)
-    print(f"✓ {tipo.capitalize()} registada com sucesso!")
-
-def editar_movimento_financeiro(dados):
-    """Permite editar uma receita ou despesa existente procurando pelo seu ID."""
-    consultar_financas_e_saldo(dados)
-    financas = dados.get("financas", [])
-    if not financas:
-        return
-
-    try:
-        id_procurado = int(input("\nDigite o ID do movimento que deseja editar: "))
-    except ValueError:
-        print("❌ ID inválido. Deve inserir um número.")
-        return
-
-    # Procurar o movimento pelo ID
-    movimento_encontrado = None
-    for m in financas:
-        if m["id"] == id_procurado:
-            movimento_encontrado = m
-            break
-
-    if not movimento_encontrado:
-        print("❌ Movimento financeiro não encontrado.")
-        return
-
-    print(f"\n--- A EDITAR MOVIMENTO [{movimento_encontrado['id']}] ---")
-    print("(Pressione ENTER sem escrever nada se quiser manter o valor atual)")
-
-    novo_tipo = input(f"Novo Tipo (receita/despesa) (atual: {movimento_encontrado['tipo']}): ").strip().lower()
-    nova_descricao = input(f"Nova Descrição (atual: {movimento_encontrado['descricao']}): ").strip()
-    novo_valor_input = input(f"Novo Valor em € (atual: {movimento_encontrado['valor']:.2f}): ").strip()
-    nova_data = input(f"Nova Data AAAA-MM-DD (atual: {movimento_encontrado['data']}): ").strip()
-
-    # Atualizar tipo se for válido
-    if novo_tipo in ["receita", "despesa"]:
-        movimento_encontrado["tipo"] = novo_tipo
-
-    # Atualizar descrição se preenchida
-    if nova_descricao:
-        movimento_encontrado["descricao"] = nova_descricao
-
-    # Atualizar valor se preenchido e for um número válido
-    if novo_valor_input:
-        try:
-            movimento_encontrado["valor"] = float(novo_valor_input)
-        except ValueError:
-            print("⚠️ Valor inválido inserido! Mantido o valor original.")
-
-    # Atualizar data se preenchida
-    if nova_data:
-        movimento_encontrado["data"] = nova_data
-
-    guardar_dados(dados)
-    print("✓ Movimento financeiro atualizado com sucesso!")
-
-# ==========================================
-# 6. MENU PRINCIPAL
-# ==========================================
-
-def menu():
     dados = carregar_dados()
-    perfil_ativo = fazer_login(dados)
-    
-    # Se o utilizador escolheu "0" no ecrã de login para sair
-    if perfil_ativo is None:
-        print("\nA encerrar a TrocApp... Até breve!")
-        return
+    dados["financas"] = [m for m in dados.get("financas", []) if m["id"] != id_movimento]
+    guardar_dados(dados)
+    return redirect(url_for("financas"))
 
-    while True:
-        print("\n==================================")
-        print(f"  TdCApp - Menu ({perfil_ativo.upper()})  ")
-        print("==================================")
+# ==========================================
+# MULTIMÉDIA
+# ==========================================
+
+@app.route("/multimedia", methods=["GET", "POST"])
+def multimedia():
+    if "perfil" not in session:
+        return redirect(url_for("login"))
         
-        # Opções visíveis para todos
-        print("1. Listar Atuações")
-        #print("2. Ver Galeria Multimédia")
+    dados = carregar_dados()
+    
+    if request.method == "POST" and session.get("perfil") in ["admin", "membro"]:
+        media_lista = dados.get("multimedia", [])
+        novo_id = max([m["id"] for m in media_lista], default=0) + 1
         
-        # Opções visíveis apenas para Membros e Admins
-        if perfil_ativo in ["membro", "admin"]:
-            print("3. Consultar Saldo e Finanças")
-            
-        # Opções visíveis apenas para Admins
-        if perfil_ativo == "admin":
-            print("4. Adicionar Atuação")
-            print("5. Editar Atuação")
-            print("6. Remover Atuação")
-            print("7. Registar Receita / Despesa")
-            print("8. Editar Movimento Financeiro")
-            #print("9. Adicionar Foto / Vídeo")
-            
-        print("0. Sair")
+        novo_item = {
+            "id": novo_id,
+            "titulo": request.form.get("titulo"),
+            "link": request.form.get("link"),
+            "tipo": request.form.get("tipo")
+        }
         
-        opcao = input("\nEscolha uma opção: ").strip()
+        dados["multimedia"].append(novo_item)
+        guardar_dados(dados)
+        return redirect(url_for("multimedia"))
         
-        # --- LÓGICA DAS OPÇÕES ---
-        if opcao == "1":
-            if perfil_ativo == "visitante":
-                print("\n--- ATUAÇÕES PÚBLICAS ---")
-                publicas = [a for a in dados.get("atuacoes", []) if a.get("agenda") == "publica"]
-                for a in publicas:
-                    print(f"[{a['id']}] {a['data']} às {a['hora']} | {a['tipo']} em {a['local']}")
-            else:
-                listar_atuacoes(dados)
-                
-        #elif opcao == "2":
-            #listar_multimedia(dados)
-            
-        elif opcao == "3" and perfil_ativo in ["membro", "admin"]:
-            consultar_financas_e_saldo(dados)
-            
-        elif opcao == "4" and perfil_ativo == "admin":
-            adicionar_atuacao(dados)
-            
-        elif opcao == "5" and perfil_ativo == "admin":
-            editar_atuacao(dados)
-            
-        elif opcao == "6" and perfil_ativo == "admin":
-            remover_atuacao(dados)
-            
-        elif opcao == "7" and perfil_ativo == "admin":
-            adicionar_movimento_financeiro(dados)
-        elif opcao == "8" and perfil_ativo == "admin":
-            editar_movimento_financeiro(dados)
-        #elif opcao == "9" and perfil_ativo == "admin":
-            #adicionar_multimedia(dados)
-            
-        elif opcao == "0":
-            print("\nA encerrar a TrocApp... Até breve!")
-            break
-        else:
-            print("❌ Opção inválida ou sem permissão para o seu perfil.")
+    return render_template("multimedia.html", media=dados.get("multimedia", []), perfil=session.get("perfil"))
+
+@app.route("/multimedia/remover/<int:id_media>")
+def remover_multimedia(id_media):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    dados["multimedia"] = [m for m in dados.get("multimedia", []) if m["id"] != id_media]
+    guardar_dados(dados)
+    return redirect(url_for("multimedia"))
+
+# ==========================================
+# UTILIZADORES
+# ==========================================
+
+@app.route("/utilizadores", methods=["GET", "POST"])
+def utilizadores():
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    
+    if request.method == "POST":
+        users = dados.get("utilizadores", [])
+        novo_id = max([u["id"] for u in users], default=0) + 1
+        
+        novo_user = {
+            "id": novo_id,
+            "username": request.form.get("username").strip().lower(),
+            "password": request.form.get("password").strip(),
+            "perfil": request.form.get("perfil")
+        }
+        
+        dados["utilizadores"].append(novo_user)
+        guardar_dados(dados)
+        return redirect(url_for("utilizadores"))
+        
+    return render_template("utilizadores.html", utilizadores=dados.get("utilizadores", []), perfil=session.get("perfil"))
+
+@app.route("/utilizadores/remover/<int:id_user>")
+def remover_utilizador(id_user):
+    if session.get("perfil") != "admin":
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    dados["utilizadores"] = [u for u in dados.get("utilizadores", []) if u["id"] != id_user]
+    guardar_dados(dados)
+    return redirect(url_for("utilizadores"))
 
 if __name__ == "__main__":
-    menu()
-
+    app.run(debug=True, host="127.0.0.1", port=5000)
