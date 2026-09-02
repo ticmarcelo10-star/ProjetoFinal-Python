@@ -1,50 +1,67 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <h2>💰 Gestão Financeira</h2>
 
 <div class="card">
-    <h3>Resumo</h3>
-    <p><strong>Receitas:</strong> {{ "%.2f"|format(total_receitas) }}€ | <strong>Despesas:</strong> {{ "%.2f"|format(total_despesas) }}€</p>
-    <h4>Saldo Total: {{ "%.2f"|format(saldo) }}€</h4>
+  <h3>Resumo</h3>
+  <p>
+    <strong>Receitas:</strong> {{ "%.2f"|format(total_receitas) }}€ |
+    <strong>Despesas:</strong> {{ "%.2f"|format(total_despesas) }}€
+  </p>
+  <h4>Saldo Total: {{ "%.2f"|format(saldo) }}€</h4>
 </div>
 
 {% if perfil == 'admin' %}
 <div class="card">
-    <h3>Registar Movimento</h3>
-    <form action="/financas" method="POST">
-        <select name="tipo">
-            <option value="receita">Receita</option>
-            <option value="despesa">Despesa</option>
-        </select>
-        <input type="text" name="descricao" placeholder="Descrição" required>
-        <input type="number" step="0.01" name="valor" placeholder="Valor (€)" required>
-        <input type="date" name="data" required>
-        <button type="submit" class="btn btn-green">Guardar</button>
-    </form>
+  <h3>Registar Movimento</h3>
+  <form action="/financas" method="POST">
+    <select name="tipo">
+      <option value="receita">Receita</option>
+      <option value="despesa">Despesa</option>
+    </select>
+    <input type="text" name="descricao" placeholder="Descrição" required />
+    <input
+      type="number"
+      step="0.01"
+      name="valor"
+      placeholder="Valor (€)"
+      required
+    />
+    <input type="date" name="data" required />
+    <button type="submit" class="btn btn-green">Guardar</button>
+  </form>
 </div>
 {% endif %}
 
 <div class="card">
-    <h3>Histórico de Movimentos</h3>
-    <table>
-        <tr>
-            <th>Data</th>
-            <th>Tipo</th>
-            <th>Descrição</th>
-            <th>Valor</th>
-            {% if perfil == 'admin' %}<th>Ação</th>{% endif %}
-        </tr>
-        {% for m in financas %}
-        <tr>
-            <td>{{ m.data }}</td>
-            <td>{{ m.tipo }}</td>
-            <td>{{ m.descricao }}</td>
-            <td>{{ "%.2f"|format(m.valor) }}€</td>
-            {% if perfil == 'admin' %}
-            <td><a href="/financas/remover/{{ m.id }}" class="btn btn-red" style="padding: 3px 6px; font-size: 12px;">Remover</a></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
+  <h3>Histórico de Movimentos</h3>
+  <table>
+    <tr>
+      <th>Data</th>
+      <th>Tipo</th>
+      <th>Descrição</th>
+      <th>Valor</th>
+      {% if perfil == 'admin' %}
+      <th>Ação</th>
+      {% endif %}
+    </tr>
+    {% for m in financas %}
+    <tr>
+      <td>{{ m.data }}</td>
+      <td>{{ m.tipo }}</td>
+      <td>{{ m.descricao }}</td>
+      <td>{{ "%.2f"|format(m.valor) }}€</td>
+      {% if perfil == 'admin' %}
+      <td>
+        <a
+          href="/financas/remover/{{ m.id }}"
+          class="btn btn-red"
+          style="padding: 3px 6px; font-size: 12px"
+          >Remover</a
+        >
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
 </div>
 {% endblock %}
