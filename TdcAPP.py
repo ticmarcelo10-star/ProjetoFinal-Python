@@ -209,6 +209,41 @@ def remover_financa(id_movimento):
     guardar_dados(dados)
     return redirect(url_for("financas"))
 
+@app.route("/financas/editar/<int:id_financa>", methods=["GET", "POST"])
+def editar_financa(id_financa):
+    # Restrição de acesso (apenas Admin ou Membro, conforme as regras da app)
+    if session.get("perfil") not in ["admin", "membro"]:
+        return "Acesso Negado", 403
+        
+    dados = carregar_dados()
+    
+    # Procura a transação/movimento pelo ID
+    financa_encontrada = None
+    for f in dados.get("financas", []):
+        if f["id"] == id_financa:
+            financa_encontrada = f
+            break
+
+    if not financa_encontrada:
+        return "Movimento não encontrado", 404
+
+    if request.method == "POST":
+        financa_encontrada["tipo"] = request.form.get("tipo", financa_encontrada["tipo"])
+        financa_encontrada["descricao"] = request.form.get("descricao", financa_encontrada["descricao"])
+        
+        # Converte o valor para float para garantir cálculos corretos no saldo
+        try:
+            financa_encontrada["valor"] = float(request.form.get("valor", financa_encontrada["valor"]))
+        except ValueError:
+            pass
+            
+        financa_encontrada["data"] = request.form.get("data", financa_encontrada["data"])
+        
+        guardar_dados(dados)
+        return redirect(url_for("financas"))
+        
+    return render_template("editar_financa.html", financa=financa_encontrada, perfil=session.get("perfil"))
+
 # ==========================================
 # MULTIMÉDIA
 # ==========================================
