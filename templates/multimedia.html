@@ -1,32 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>📸 Galeria Multimédia</h2>
+<h2>🖼️ Galeria Multimédia</h2>
 
-{% if perfil in ['admin', 'membro'] %}
+{% if perfil == 'admin' %}
 <div class="card">
-    <h3>Adicionar Ficheiro / Link</h3>
+    <h3>Adicionar Novo Conteúdo</h3>
     <form action="/multimedia" method="POST">
-        <input type="text" name="titulo" placeholder="Título" required>
-        <input type="url" name="link" placeholder="URL da imagem ou vídeo" required>
-        <select name="tipo">
-            <option value="foto">Foto</option>
-            <option value="video">Vídeo</option>
+        <label>Título:</label>
+        <input type="text" name="titulo" placeholder="Ex: Ensaio Geral ou Atuação na Praça" required>
+
+        <label>Tipo de Conteúdo:</label>
+        <select name="tipo" required>
+            <option value="foto">Foto (Link direto de imagem)</option>
+            <option value="video">Vídeo (YouTube ou Google Drive)</option>
         </select>
-        <button type="submit" class="btn btn-green">Adicionar</button>
+
+        <label>URL / Link:</label>
+        <input type="url" name="url" placeholder="Cole o link da foto ou o link do vídeo (YouTube / Google Drive)" required>
+
+        <br><br>
+        <button type="submit" class="btn btn-green">Adicionar à Galeria</button>
     </form>
 </div>
 {% endif %}
 
-<div class="card">
-    <h3>Conteúdos</h3>
-    {% for item in media %}
-    <div style="border-bottom: 1px solid #ccc; padding: 10px 0;">
-        <strong>{{ item.titulo }}</strong> ({{ item.tipo }})<br>
-        <a href="{{ item.link }}" target="_blank">{{ item.link }}</a>
-        {% if perfil == 'admin' %}
-            <br><a href="/multimedia/remover/{{ item.id }}" class="btn btn-red" style="padding: 2px 5px; font-size: 10px; margin-top: 5px;">Remover</a>
-        {% endif %}
-    </div>
+<hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+    {% for m in multimedias %}
+        <div class="card" style="width: 300px; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h4>{{ m.titulo }}</h4>
+
+                {% if m.tipo == 'foto' %}
+                    <!-- Renderiza Imagem -->
+                    <img src="{{ m.url }}" alt="{{ m.titulo }}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd;">
+
+                {% elif m.tipo == 'video' %}
+                    <!-- Renderiza Vídeo (YouTube ou Google Drive) -->
+                    <iframe src="{{ m.url }}" width="100%" height="200" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="border-radius: 6px; border: 1px solid #ddd;"></iframe>
+                {% endif %}
+            </div>
+
+            {% if perfil == 'admin' %}
+                <div style="margin-top: 15px;">
+                    <a href="/multimedia/remover/{{ m.id }}" class="btn btn-red" style="padding: 4px 10px; font-size: 12px;" onclick="return confirm('Tem a certeza que deseja remover este item?');">Remover</a>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>Nenhum conteúdo multimédia adicionado até ao momento.</p>
     {% endfor %}
 </div>
 {% endblock %}

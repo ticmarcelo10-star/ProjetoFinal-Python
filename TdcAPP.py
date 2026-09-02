@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
@@ -248,35 +249,70 @@ def editar_financa(id_financa):
 # MULTIMÉDIA
 # ==========================================
 
+def formatar_url_multimedia(url, tipo):
+    """
+    Converte links normais do YouTube e Google Drive para os formatos aceites em <iframe>.
+    """
+    if tipo == "video":
+        # Converte links do Google Drive (/view -> /preview)
+        if "drive.google.com" in url:
+            url = re.sub(r'/view(\?.*)?$', '/preview', url)
+            if not url.endswith('/preview'):
+                url = url.split('?')[0] + '/preview'
+        # Converte links normais do YouTube (watch?v=ID -> embed/ID)
+        elif "youtube.com/watch" in url:
+            video_id = url.split("v=")[-1].split("&")[0]
+            url = f"https://www.youtube.com/embed/{video_id}"
+        elif "youtu.be/" in url:
+            video_id = url.split("youtu.be/")[-1].split("?")[0]
+            url = f"https://www.youtube.com/embed/{video_id}"
+    elif tipo == "foto":
+        # Converte link de partilha do Google Drive para link direto de imagem
+        if "drive.google.com" in url and "/file/d/" in url:
+            file_id = url.split("/file/d/")[1].split("/")[0]
+            url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+
+    return url
+
 @app.route("/multimedia", methods=["GET", "POST"])
 def multimedia():
-    if "perfil" not in session:
+    # Verifica se o utilizador tem a sessão iniciada através do perfil
+    if not session.get("perfil"):
         return redirect(url_for("login"))
         
     dados = carregar_dados()
-    
-    if request.method == "POST" and session.get("perfil") in ["admin", "membro"]:
-        media_lista = dados.get("multimedia", [])
-        novo_id = max([m["id"] for m in media_lista], default=0) + 1
-        
-        novo_item = {
+    if "multimedia" not in dados:
+        dados["multimedia"] = []
+
+    if request.method == "POST":
+        if session.get("perfil") != "admin":
+            return "Acesso Negado", 403
+
+        titulo = request.form.get("titulo")
+        tipo = request.form.get("tipo")
+        url_raw = request.form.get("url")
+
+        url_final = formatar_url_multimedia(url_raw, tipo)
+
+        novo_id = max([m["id"] for m in dados["multimedia"]], default=0) + 1
+        nova_midia = {
             "id": novo_id,
-            "titulo": request.form.get("titulo"),
-            "link": request.form.get("link"),
-            "tipo": request.form.get("tipo")
+            "titulo": titulo,
+            "tipo": tipo,
+            "url": url_final
         }
         
-        dados["multimedia"].append(novo_item)
+        dados["multimedia"].append(nova_midia)
         guardar_dados(dados)
         return redirect(url_for("multimedia"))
-        
-    return render_template("multimedia.html", media=dados.get("multimedia", []), perfil=session.get("perfil"))
+
+    return render_template("multimedia.html", multimedias=dados["multimedia"], perfil=session.get("perfil"))
 
 @app.route("/multimedia/remover/<int:id_media>")
 def remover_multimedia(id_media):
     if session.get("perfil") != "admin":
         return "Acesso Negado", 403
-        
+
     dados = carregar_dados()
     dados["multimedia"] = [m for m in dados.get("multimedia", []) if m["id"] != id_media]
     guardar_dados(dados)
