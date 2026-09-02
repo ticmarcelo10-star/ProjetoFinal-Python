@@ -46,7 +46,7 @@
       {% if perfil == 'admin' %}
       <td>
         <a
-          href="/atuacoes/estado/{{ a.id }}/cancelada"
+          href="/atuacoes/estado/{{ a.id }}/Cancelada"
           class="btn btn-blue"
           style="padding: 3px 6px; font-size: 12px"
           >Cancelar</a
@@ -57,6 +57,10 @@
           style="padding: 3px 6px; font-size: 12px"
           >Remover</a
         >
+        <a href="/atuacoes/editar/{{ a.id }}" 
+        class="btn btn-blue" 
+        style="padding: 3px 6px; font-size: 12px;"
+        >Editar</a>
       </td>
       {% endif %}
     </tr>

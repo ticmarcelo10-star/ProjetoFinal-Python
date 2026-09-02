@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>✏️ Editar Atuação</h2>
+
+<div class="card">
+    <form action="/atuacoes/editar/{{ atuacao.id }}" method="POST">
+        <label>Data:</label>
+        <input type="text" class="campo-data" name="data" value="{{ atuacao.data }}" required>
+        
+        <label>Hora:</label>
+        <input type="text" class="campo-hora" name="hora" value="{{ atuacao.hora }}" required>
+        
+        <label>Local:</label>
+        <input type="text" name="local" value="{{ atuacao.local }}" required>
+        
+        <label>Tipo:</label>
+        <input type="text" name="tipo" value="{{ atuacao.tipo }}" required>
+        
+        <label>Estado:</label>
+        <select name="estado">
+            <option value="ativa" {% if atuacao.estado == 'ativa' %}selected{% endif %}>Ativa</option>
+            <option value="cancelada" {% if atuacao.estado == 'cancelada' %}selected{% endif %}>Cancelada</option>
+        </select>
+
+        <label>Agenda:</label>
+        <select name="agenda">
+            <option value="publica" {% if atuacao.agenda == 'publica' %}selected{% endif %}>Pública</option>
+            <option value="privada" {% if atuacao.agenda == 'privada' %}selected{% endif %}>Privada</option>
+        </select>
+        <br><br>
+        <button type="submit" class="btn btn-green">Guardar Alterações</button>
+        <a href="/atuacoes" class="btn btn-red">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

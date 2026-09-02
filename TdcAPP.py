@@ -105,23 +105,34 @@ def adicionar_atuacao():
     guardar_dados(dados)
     return redirect(url_for("atuacoes"))
 
-@app.route("/atuacoes/editar/<int:id_atuacao>", methods=["POST"])
+@app.route("/atuacoes/editar/<int:id_atuacao>", methods=["GET", "POST"])
 def editar_atuacao(id_atuacao):
     if session.get("perfil") != "admin":
         return "Acesso Negado", 403
         
     dados = carregar_dados()
+    
+    # Procura a atuação pelo ID
+    atuacao_encontrada = None
     for a in dados.get("atuacoes", []):
         if a["id"] == id_atuacao:
-            a["data"] = request.form.get("data", a["data"])
-            a["hora"] = request.form.get("hora", a["hora"])
-            a["local"] = request.form.get("local", a["local"])
-            a["tipo"] = request.form.get("tipo", a["tipo"])
-            a["agenda"] = request.form.get("agenda", a["agenda"])
+            atuacao_encontrada = a
             break
-            
-    guardar_dados(dados)
-    return redirect(url_for("atuacoes"))
+
+    if request.method == "POST":
+        if atuacao_encontrada:
+            atuacao_encontrada["data"] = request.form.get("data")
+            atuacao_encontrada["hora"] = request.form.get("hora")
+            atuacao_encontrada["local"] = request.form.get("local")
+            atuacao_encontrada["tipo"] = request.form.get("tipo")
+            atuacao_encontrada["agenda"] = request.form.get("agenda")
+            atuacao_encontrada["estado"] = request.form.get("estado")
+            guardar_dados(dados)
+        return redirect(url_for("atuacoes"))
+        
+    # Se for GET, abre a página com os dados
+    return render_template("editar_atuacao.html", atuacao=atuacao_encontrada, perfil=session.get("perfil"))
+
 
 @app.route("/atuacoes/estado/<int:id_atuacao>/<novo_estado>")
 def alterar_estado_atuacao(id_atuacao, novo_estado):
