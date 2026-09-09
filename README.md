@@ -94,10 +94,12 @@ Certifica-te de que a estrutura do projeto está organizada da seguinte forma:
 
 ```plaintext
 TdCApp/
-├── app.py
+├── TdcApp.py
 ├── tdc.json (gerado automaticamente no arranque caso não exista)
 └── templates/
     ├── base.html
+    ├── editar_atuacao.html
+    ├── editar_financa.html
     ├── login.html
     ├── index.html
     ├── financas.html
@@ -122,15 +124,15 @@ Navega no browser até ao endereço de login:
 
 ### Credenciais de Acesso Predefinidas
 
-* **Administrador:** Username: `admin` | Password: `admtdc26`
-* **Membro:** Username: `membro` | Password: `trocadalho26`
+* **Administrador:** Username: `admin` | Password: *****
+* **Membro:** Username: `membro` | Password: *****
 * **Visitante:** Clica no botão "Entrar como Visitante" no ecrã de login (sem password).
 
 ---
 
 ## 🛠️ 5. Principais Funções do Programa
 
-O ficheiro principal `app.py` organiza-se nos seguintes módulos e funções:
+O ficheiro principal `TdCApp.py` organiza-se nos seguintes módulos e funções:
 
 ### Módulo de Persistência (JSON)
 * `carregar_dados()`: Lê o ficheiro `tdc.json` e inicializa a estrutura por omissão caso o ficheiro não exista.
@@ -143,19 +145,27 @@ O ficheiro principal `app.py` organiza-se nos seguintes módulos e funções:
 ### Módulo de Gestão de Atuações (Agenda)
 * `atuacoes()` (`/atuacoes` — GET): Apresenta a lista de eventos. Aplica um filtro para ocultar eventos privados caso o perfil seja visitante.
 * `adicionar_atuacao()` (`/atuacoes/adicionar` — POST): Permite a criação de um novo evento (Administrador).
+* `editar_atuacao()` (`/atuacoes/editar/<id>` — GET/POST): Permite a edição de um evento já criado (Administrador).
 * `alterar_estado_atuacao(id_atuacao, novo_estado)` (`/atuacoes/estado/...` — GET): Atualiza o estado da atuação para "ativa" ou "cancelada" (Administrador).
 * `remover_atuacao(id_atuacao)` (`/atuacoes/remover/<id>` — GET): Elimina uma atuação (Administrador).
 
 ### Módulo Financeiro
 * `financas()` (`/financas` — GET/POST): Apresenta o histórico de receitas/despesas, calcula o saldo total acumulado e permite registar novos movimentos (Administrador).
+* `remover_financa()` (`/financas/remover/<id>` — GET/POST): Remove um movimento financeiro (Administrador).
+* `editar_financa()` (`/financas/editar/<id>` — GET/POST): Edita um movimento financeiro (Administrador).
 
-### Módulo Multimédia e Utilizadores
-* `multimedia()` (`/multimedia` — GET/POST): Apresenta e permite adicionar hiperligações para fotos e vídeos das atuações.
+### Módulo Multimédia
+* `multimedia()` (`/multimedia` — GET/POST): Apresenta fotos e vídeos das atuações.
+                                             Permite ao adicionar hiperligações para fotos e vídeos das atuações. (Administrador)
+* `remover_multimedia()` (`/multimedia/remover/<id>` — GET): Remove uma hiperligação de foto ou vídeo já criada. (Administrador)
+
+### Módulo Utilizadores
 * `utilizadores()` (`/utilizadores` — GET/POST): Permite ao Administrador criar e gerir as contas de acesso da aplicação.
+* `remover_utilizador()` (`/utilizadores/remover/<id>` — GET): Permite ao Administrador remover as contas de acesso da aplicação.
 
 ## 🏗️ 6. Decomposição Inicial da Solução
 
-A aplicação foi decomposta numa arquitetura modular baseada em rotas HTTP e funções de suporte no `app.py`. A lógica segue o fluxo de leitura/escrita no ficheiro `tdc.json`, controlo de sessão e filtragem de vistas com base no perfil do utilizador.
+A aplicação foi decomposta numa arquitetura modular baseada em rotas HTTP e funções de suporte no `TdCApp.py`. A lógica segue o fluxo de leitura/escrita no ficheiro `tdc.json`, controlo de sessão e filtragem de vistas com base no perfil do utilizador.
 
 ### Tabela de Funções e Rotas
 
@@ -165,13 +175,18 @@ A aplicação foi decomposta numa arquitetura modular baseada em rotas HTTP e fu
 | `guardar_dados(dados)` | N/A | Escreve a estrutura atualizada de dicionários/listas no ficheiro `tdc.json`. | Interno |
 | `login()` (`/login`) | GET / POST | Autentica utilizadores, inicia a sessão (`session['perfil']`) ou permite acesso como visitante. | Público |
 | `logout()` (`/logout`) | GET | Limpa os dados de sessão e redireciona para a página de login. | Autenticado |
-| `atuacoes()` (`/atuacoes`) | GET | Apresenta a lista de eventos. Filtra apenas eventos de agenda pública se for visitante. | Todos |
+| `atuacoes()` (`/atuacoes`) | GET | Apresenta a lista de eventos. Filtra apenas eventos de agenda pública se for visitante. | Admin / Membro / Visitante |
 | `adicionar_atuacao()` (`/atuacoes/adicionar`) | POST | Regista uma nova atuação no sistema e grava no JSON. | Admin |
+| `editar_atuacao()` (`/atuacoes/editar/<id>`) | GET / POST | Permite a edição de um evento já criado . | Admin |
 | `alterar_estado_atuacao()` (`/atuacoes/estado/...`) | GET | Altera o estado de uma atuação (ex: ativa/cancelada). | Admin |
 | `remover_atuacao()` (`/atuacoes/remover/<id>`) | GET | Remove uma atuação pelo ID e atualiza o JSON. | Admin |
 | `financas()` (`/financas`) | GET / POST | Apresenta o histórico financeiro, calcula o saldo total e permite registar movimentos. | Admin / Membro |
-| `multimedia()` (`/multimedia`) | GET / POST | Apresenta a galeria e permite adicionar hiperligações para fotos ou vídeos. | Todos |
+| `remover_financa()` (`/financas/remover/<id>`) | GET | Remover um movimento financeiro. | Admin |
+| `editar_financa()` (`/financas/editar/<id>`) | GET / POST | Editar um movimento financeiro. | Admin |
+| `multimedia()` (`/multimedia`) | GET / POST | Apresenta a galeria e permite adicionar hiperligações para fotos ou vídeos. | Admin / Membro / Visitante |
+| `remover_multimedia()` (`/multimedia/remover/<id>`) | GET | Permite ao Administrador remover as contas de acesso da aplicação.  | Admin |
 | `utilizadores()` (`/utilizadores`) | GET / POST | Permite criar novas contas de utilizador com perfis definidos (`admin` ou `membro`). | Admin |
+| `remover_utilizador()` (`/utilizadores/remover/<id>`) | GET | Permite ao Administrador remover as contas de acesso da aplicação. | Admin |
 
 ### Pseudocódigo do Fluxo de Permissões (RBAC)
 ```text
